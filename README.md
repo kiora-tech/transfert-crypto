@@ -6,7 +6,7 @@ Built on the **Web Crypto API** — no external cryptography dependencies. Uses 
 
 ## Why Open Source?
 
-This library handles the most security-critical part of [Kiora Transfert](https://github.com/kiora-tech/transfert): encrypting and decrypting files in the browser before they ever touch a server.
+This library handles the most security-critical part of [Zero Trust Transfer](https://zerotrusttransfer.fr/): encrypting and decrypting files in the browser before they ever touch a server.
 
 By open-sourcing the encryption layer:
 - **Anyone can audit** the cryptographic implementation
