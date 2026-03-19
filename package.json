@@ -1,0 +1,55 @@
+{
+  "name": "@kiora-tech/transfert-crypto",
+  "version": "1.0.0",
+  "description": "End-to-end encryption library for file transfers using Web Crypto API. AES-256-GCM with chunked file support, PBKDF2 key derivation, and zero-knowledge architecture.",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./encryption": "./src/encryption.js",
+    "./key-manager": "./src/key-manager.js",
+    "./chunk-processor": "./src/chunk-processor.js",
+    "./secure-memory": "./src/secure-memory.js",
+    "./secure-logger": "./src/secure-logger.js",
+    "./mutex": "./src/mutex.js"
+  },
+  "files": [
+    "src/",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "jest --config jest.config.js",
+    "test:coverage": "jest --config jest.config.js --coverage"
+  },
+  "keywords": [
+    "encryption",
+    "aes-256-gcm",
+    "e2e",
+    "end-to-end",
+    "file-transfer",
+    "web-crypto",
+    "chunked-upload",
+    "pbkdf2",
+    "zero-knowledge",
+    "client-side-encryption"
+  ],
+  "author": "Kiora Tech",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kiora-tech/transfert-crypto.git"
+  },
+  "bugs": {
+    "url": "https://github.com/kiora-tech/transfert-crypto/issues"
+  },
+  "homepage": "https://github.com/kiora-tech/transfert-crypto#readme",
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
+    "@jest/globals": "^29.7.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

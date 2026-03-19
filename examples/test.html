@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crypto Module Test Suite</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background: #28a745;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>Crypto Module Test Suite</h1>
+    <p>Tests for end-to-end encryption modules using Web Crypto API</p>
+
+    <div class="test-section">
+        <h2>Browser Compatibility</h2>
+        <div id="compatibility-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Suite</h2>
+        <button onclick="runAllTests()">Run All Tests</button>
+        <button onclick="clearResults()">Clear Results</button>
+        <div id="test-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Performance Benchmarks</h2>
+        <button onclick="runPerformanceTests()">Run Performance Tests</button>
+        <div id="performance-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Interactive Demo</h2>
+        <h3>Auto Encryption Mode</h3>
+        <input type="file" id="file-input" />
+        <br><br>
+        <button onclick="encryptFile()">Encrypt File</button>
+        <button onclick="decryptFile()" id="decrypt-btn" disabled>Decrypt File</button>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progress"></div>
+        </div>
+        <div id="demo-results"></div>
+    </div>
+
+    <script type="module">
+        import { CryptoEngine, isCryptoSupported } from '../src/encryption.js';
+        import { KeyManager, EncryptionMode } from '../src/key-manager.js';
+        import { ChunkProcessor } from '../src/chunk-processor.js';
+
+        // Make available globally for onclick handlers
+        window.CryptoEngine = CryptoEngine;
+        window.KeyManager = KeyManager;
+        window.ChunkProcessor = ChunkProcessor;
+        window.EncryptionMode = EncryptionMode;
+        window.isCryptoSupported = isCryptoSupported;
+
+        // Store encrypted data for demo
+        window.encryptedData = null;
+        window.encryptionKey = null;
+        window.processor = null;
+
+        // Check compatibility
+        const compatDiv = document.getElementById('compatibility-result');
+        if (isCryptoSupported()) {
+            compatDiv.innerHTML = '<div class="test-result success">✓ Web Crypto API is supported</div>';
+        } else {
+            compatDiv.innerHTML = '<div class="test-result error">✗ Web Crypto API is NOT supported</div>';
+        }
+
+        // Test functions
+        window.runAllTests = async function() {
+            const resultsDiv = document.getElementById('test-results');
+            resultsDiv.innerHTML = '<div class="test-result info">Running tests...</div>';
+
+            const tests = [
+                testKeyGeneration,
+                testKeyExportImport,
+                testChunkEncryptionDecryption,
+                testMetadataEncryption,
+                testPasswordDerivation,
+                testChunkProcessor,
+                testErrorHandling
+            ];
+
+            let passed = 0;
+            let failed = 0;
+
+            for (const test of tests) {
+                try {
+                    await test();
+                    passed++;
+                    resultsDiv.innerHTML += `<div class="test-result success">✓ ${test.name} passed</div>`;
+                } catch (error) {
+                    failed++;
+                    resultsDiv.innerHTML += `<div class="test-result error">✗ ${test.name} failed: ${error.message}</div>`;
+                }
+            }
+
+            resultsDiv.innerHTML += `<div class="test-result info">Results: ${passed} passed, ${failed} failed</div>`;
+        };
+
+        window.clearResults = function() {
+            document.getElementById('test-results').innerHTML = '';
+            document.getElementById('performance-results').innerHTML = '';
+            document.getElementById('demo-results').innerHTML = '';
+        };
+
+        // Individual test functions
+        async function testKeyGeneration() {
+            const engine = new CryptoEngine();
+            const key = await engine.generateKey();
+            if (!key || key.type !== 'secret') {
+                throw new Error('Invalid key generated');
+            }
+        }
+
+        async function testKeyExportImport() {
+            const engine = new CryptoEngine();
+            const originalKey = await engine.generateKey();
+            const exported = await engine.exportKeyToUrl(originalKey);
+            const imported = await engine.importKeyFromUrl(exported);
+
+            if (!exported || typeof exported !== 'string') {
+                throw new Error('Key export failed');
+            }
+            if (!imported || imported.type !== 'secret') {
+                throw new Error('Key import failed');
+            }
+        }
+
+        async function testChunkEncryptionDecryption() {
+            const engine = new CryptoEngine();
+            const key = await engine.generateKey();
+            const originalData = new TextEncoder().encode('Test data for encryption');
+
+            const { encryptedData, iv } = await engine.encryptChunk(key, originalData);
+            const decryptedData = await engine.decryptChunk(key, encryptedData, iv);
+
+            const decryptedText = new TextDecoder().decode(decryptedData);
+            const originalText = new TextDecoder().decode(originalData);
+
+            if (decryptedText !== originalText) {
+                throw new Error('Decrypted data does not match original');
+            }
+        }
+
+        async function testMetadataEncryption() {
+            const engine = new CryptoEngine();
+            const key = await engine.generateKey();
+            const metadata = {
+                originalName: 'test.txt',
+                size: 1024,
+                mimeType: 'text/plain',
+                chunkIVs: [new Uint8Array(12), new Uint8Array(12)]
+            };
+
+            const encrypted = await engine.encryptMetadata(key, metadata);
+            const decrypted = await engine.decryptMetadata(key, encrypted);
+
+            if (decrypted.originalName !== metadata.originalName) {
+                throw new Error('Metadata decryption failed');
+            }
+        }
+
+        async function testPasswordDerivation() {
+            const engine = new CryptoEngine();
+            const password = 'testPassword123!';
+            const salt = engine.generateSalt();
+
+            const key = await engine.deriveKeyFromPassword(password, salt);
+            if (!key || key.type !== 'secret') {
+                throw new Error('Password derivation failed');
+            }
+
+            // Test that same password + salt produces same key
+            const key2 = await engine.deriveKeyFromPassword(password, salt);
+            const exported1 = await engine.exportKeyToUrl(key);
+            const exported2 = await engine.exportKeyToUrl(key2);
+
+            if (exported1 !== exported2) {
+                throw new Error('Password derivation not deterministic');
+            }
+        }
+
+        async function testChunkProcessor() {
+            const engine = new CryptoEngine();
+            const keyManager = new KeyManager(engine, EncryptionMode.AUTO);
+            await keyManager.generateRandomKey();
+            const processor = new ChunkProcessor(engine);
+
+            const testBlob = new Blob(['Test chunk data']);
+            const { encryptedBlob, iv } = await processor.encryptChunkForUpload(
+                keyManager.getKey(),
+                testBlob,
+                0
+            );
+
+            const decrypted = await processor.decryptDownloadedChunk(
+                keyManager.getKey(),
+                encryptedBlob
+            );
+
+            const original = await testBlob.arrayBuffer();
+            if (decrypted.byteLength !== original.byteLength) {
+                throw new Error('Chunk processor round-trip failed');
+            }
+        }
+
+        async function testErrorHandling() {
+            const engine = new CryptoEngine();
+
+            try {
+                await engine.importKeyFromUrl('invalid_key');
+                throw new Error('Should have thrown error for invalid key');
+            } catch (error) {
+                if (!error.message.includes('Failed to import key')) {
+                    throw error;
+                }
+            }
+        }
+
+        // Performance tests
+        window.runPerformanceTests = async function() {
+            const resultsDiv = document.getElementById('performance-results');
+            resultsDiv.innerHTML = '<div class="test-result info">Running performance tests...</div>';
+
+            try {
+                const engine = new CryptoEngine();
+                const keyManager = new KeyManager(engine, EncryptionMode.AUTO);
+                await keyManager.generateRandomKey();
+                const processor = new ChunkProcessor(engine);
+
+                // Test 5MB chunk encryption
+                const chunkSize = 5 * 1024 * 1024;
+                const testData = new Uint8Array(chunkSize);
+                crypto.getRandomValues(testData);
+                const testBlob = new Blob([testData]);
+
+                const startTime = performance.now();
+                const { encryptedBlob } = await processor.encryptChunkForUpload(
+                    keyManager.getKey(),
+                    testBlob,
+                    0
+                );
+                const encryptTime = performance.now() - startTime;
+
+                const throughput = (chunkSize / 1024 / 1024) / (encryptTime / 1000);
+                const targetMet = encryptTime < 500 ? 'success' : 'error';
+
+                resultsDiv.innerHTML += `<div class="test-result info">Chunk Size: ${(chunkSize / 1024 / 1024).toFixed(2)} MB</div>`;
+                resultsDiv.innerHTML += `<div class="test-result info">Encrypted Size: ${(encryptedBlob.size / 1024 / 1024).toFixed(2)} MB</div>`;
+                resultsDiv.innerHTML += `<div class="test-result ${targetMet}">Encryption Time: ${encryptTime.toFixed(2)} ms (target: <500ms)</div>`;
+                resultsDiv.innerHTML += `<div class="test-result info">Throughput: ${throughput.toFixed(2)} MB/s</div>`;
+
+                // Test key generation
+                const keyGenStart = performance.now();
+                await engine.generateKey();
+                const keyGenTime = performance.now() - keyGenStart;
+                resultsDiv.innerHTML += `<div class="test-result info">Key Generation: ${keyGenTime.toFixed(2)} ms</div>`;
+
+                // Test PBKDF2
+                const pbkdfStart = performance.now();
+                const salt = engine.generateSalt();
+                await engine.deriveKeyFromPassword('testPassword123', salt);
+                const pbkdfTime = performance.now() - pbkdfStart;
+                resultsDiv.innerHTML += `<div class="test-result info">PBKDF2 Derivation: ${pbkdfTime.toFixed(2)} ms (100,000 iterations)</div>`;
+
+            } catch (error) {
+                resultsDiv.innerHTML += `<div class="test-result error">Performance test failed: ${error.message}</div>`;
+            }
+        };
+
+        // Interactive demo
+        window.encryptFile = async function() {
+            const fileInput = document.getElementById('file-input');
+            const resultsDiv = document.getElementById('demo-results');
+            const progressBar = document.getElementById('progress');
+
+            if (!fileInput.files.length) {
+                resultsDiv.innerHTML = '<div class="test-result error">Please select a file</div>';
+                return;
+            }
+
+            const file = fileInput.files[0];
+            resultsDiv.innerHTML = '<div class="test-result info">Encrypting file...</div>';
+
+            try {
+                const engine = new CryptoEngine();
+                const keyManager = new KeyManager(engine, EncryptionMode.AUTO);
+                await keyManager.generateRandomKey();
+                const processor = new ChunkProcessor(engine);
+
+                window.encryptionKey = keyManager;
+                window.processor = processor;
+
+                // Split into chunks
+                const chunkSize = 5 * 1024 * 1024;
+                const chunks = [];
+                const encryptedChunks = [];
+
+                for (let offset = 0; offset < file.size; offset += chunkSize) {
+                    const chunk = file.slice(offset, offset + chunkSize);
+                    chunks.push(chunk);
+                }
+
+                // Encrypt chunks
+                for (let i = 0; i < chunks.length; i++) {
+                    const { encryptedBlob } = await processor.encryptChunkForUpload(
+                        keyManager.getKey(),
+                        chunks[i],
+                        i
+                    );
+                    encryptedChunks.push(encryptedBlob);
+
+                    const progress = ((i + 1) / chunks.length) * 100;
+                    progressBar.style.width = progress + '%';
+                }
+
+                // Create metadata
+                const metadata = {
+                    originalName: file.name,
+                    size: file.size,
+                    mimeType: file.type,
+                    chunkIVs: processor.getChunkIVs()
+                };
+
+                const encryptedMetadata = await engine.encryptMetadata(keyManager.getKey(), metadata);
+
+                window.encryptedData = {
+                    chunks: encryptedChunks,
+                    metadata: encryptedMetadata
+                };
+
+                const keyForUrl = await keyManager.exportKeyForUrl();
+
+                resultsDiv.innerHTML = `
+                    <div class="test-result success">✓ File encrypted successfully</div>
+                    <div class="test-result info">File: ${file.name}</div>
+                    <div class="test-result info">Size: ${(file.size / 1024 / 1024).toFixed(2)} MB</div>
+                    <div class="test-result info">Chunks: ${chunks.length}</div>
+                    <div class="test-result info">Encryption Key: <code>${keyForUrl.substring(0, 40)}...</code></div>
+                `;
+
+                document.getElementById('decrypt-btn').disabled = false;
+
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="test-result error">Encryption failed: ${error.message}</div>`;
+            }
+        };
+
+        window.decryptFile = async function() {
+            const resultsDiv = document.getElementById('demo-results');
+            const progressBar = document.getElementById('progress');
+
+            if (!window.encryptedData || !window.encryptionKey) {
+                resultsDiv.innerHTML = '<div class="test-result error">No encrypted data available</div>';
+                return;
+            }
+
+            resultsDiv.innerHTML += '<div class="test-result info">Decrypting file...</div>';
+
+            try {
+                const engine = new CryptoEngine();
+                const metadata = await engine.decryptMetadata(
+                    window.encryptionKey.getKey(),
+                    window.encryptedData.metadata
+                );
+
+                const decryptedChunks = [];
+                for (let i = 0; i < window.encryptedData.chunks.length; i++) {
+                    const decrypted = await window.processor.decryptDownloadedChunk(
+                        window.encryptionKey.getKey(),
+                        window.encryptedData.chunks[i]
+                    );
+                    decryptedChunks.push(new Uint8Array(decrypted));
+
+                    const progress = ((i + 1) / window.encryptedData.chunks.length) * 100;
+                    progressBar.style.width = progress + '%';
+                }
+
+                // Reassemble file
+                const completeFile = new Blob(decryptedChunks, { type: metadata.mimeType });
+
+                // Trigger download
+                const url = URL.createObjectURL(completeFile);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = metadata.originalName;
+                a.click();
+                URL.revokeObjectURL(url);
+
+                resultsDiv.innerHTML += `
+                    <div class="test-result success">✓ File decrypted successfully</div>
+                    <div class="test-result info">Downloaded: ${metadata.originalName}</div>
+                `;
+
+            } catch (error) {
+                resultsDiv.innerHTML += `<div class="test-result error">Decryption failed: ${error.message}</div>`;
+            }
+        };
+    </script>
+</body>
+</html>
