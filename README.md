@@ -249,6 +249,11 @@ Security-related contributions are especially valued.
 
 [MIT](LICENSE) — Use freely in any project.
 
+## Links
+
+- [Zero Trust Transfer](https://zerotrusttransfer.fr/) — Secure file transfer service
+- [Blog](https://zerotrusttransfer.fr/blog) — Articles on security, encryption and file transfer
+
 ## References
 
 - [Web Crypto API Specification](https://www.w3.org/TR/WebCryptoAPI/)
