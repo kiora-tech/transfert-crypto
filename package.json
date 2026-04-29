@@ -1,7 +1,7 @@
 {
   "name": "@kiora-tech/transfert-crypto",
-  "version": "1.0.0",
-  "description": "End-to-end encryption library for file transfers using Web Crypto API. AES-256-GCM with chunked file support, PBKDF2 key derivation, and zero-knowledge architecture.",
+  "version": "2.0.0",
+  "description": "End-to-end encryption library for file transfers and shared vaults. AES-256-GCM file chunking, PBKDF2 password-derived master keys, RSA-OAEP-2048 envelope for per-user keypairs, passphrase-based vault key wrapping. Web Crypto API only, zero dependencies.",
   "type": "module",
   "main": "src/index.js",
   "exports": {
@@ -11,7 +11,10 @@
     "./chunk-processor": "./src/chunk-processor.js",
     "./secure-memory": "./src/secure-memory.js",
     "./secure-logger": "./src/secure-logger.js",
-    "./mutex": "./src/mutex.js"
+    "./mutex": "./src/mutex.js",
+    "./master-key": "./src/master-key.js",
+    "./keypair": "./src/keypair.js",
+    "./invitation-crypto": "./src/invitation-crypto.js"
   },
   "files": [
     "src/",
@@ -25,9 +28,11 @@
   "keywords": [
     "encryption",
     "aes-256-gcm",
+    "rsa-oaep",
     "e2e",
     "end-to-end",
     "file-transfer",
+    "shared-vault",
     "web-crypto",
     "chunked-upload",
     "pbkdf2",

@@ -22,6 +22,31 @@ export { ChunkProcessor };
 export { AsyncMutex, KeyConsistencyGuard };
 export { SecureMemory, SecureBuffer, withSecureCleanup };
 
+// v2: identity envelope helpers (per-user keypair + passphrase wrap +
+// password-derived master key). These are pure crypto primitives — no DOM,
+// no storage, no app-specific constants. The consuming app provides the
+// salt prefix and storage keys.
+export {
+    deriveKeyFromPasswordAndEmail,
+    encryptKeyWithKey,
+    decryptKeyWithKey,
+    exportKeyAsB64Url,
+} from './master-key.js';
+export {
+    KEYPAIR_VERSION,
+    generateKeypair,
+    exportPublicKey,
+    importPublicKey,
+    exportPrivateKeyEncrypted,
+    importEncryptedPrivateKey,
+    wrapAesKey,
+    unwrapAesKey,
+} from './keypair.js';
+export {
+    wrapVaultKeyWithPassphrase,
+    unwrapVaultKeyWithPassphrase,
+} from './invitation-crypto.js';
+
 /**
  * Quick start helper - Create fully initialized crypto system
  *
@@ -76,7 +101,7 @@ export async function initCrypto(mode = 'auto', password = null) {
  * Version information
  * @constant {string}
  */
-export const VERSION = '1.0.0';
+export const VERSION = '2.0.0';
 
 /**
  * Encryption specifications for reference
