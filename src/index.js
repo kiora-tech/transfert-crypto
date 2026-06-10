@@ -26,13 +26,18 @@ export { SecureMemory, SecureBuffer, withSecureCleanup };
 // password-derived master key). These are pure crypto primitives — no DOM,
 // no storage, no app-specific constants. The consuming app provides the
 // salt prefix and storage keys.
-export {
+//
+// Written as import-then-export (not `export ... from`) on purpose: Symfony
+// Asset Mapper's import scanner only follows `import` statements, so bare
+// re-exports would leave these modules out of the compiled importmap (404 in
+// prod).
+import {
     deriveKeyFromPasswordAndEmail,
     encryptKeyWithKey,
     decryptKeyWithKey,
     exportKeyAsB64Url,
 } from './master-key.js';
-export {
+import {
     KEYPAIR_VERSION,
     generateKeypair,
     exportPublicKey,
@@ -42,14 +47,39 @@ export {
     wrapAesKey,
     unwrapAesKey,
 } from './keypair.js';
-export {
+import {
     wrapVaultKeyWithPassphrase,
     unwrapVaultKeyWithPassphrase,
 } from './invitation-crypto.js';
-export {
+import {
     generateRecoveryCode,
     normalizeRecoveryCode,
 } from './recovery-code.js';
+
+export {
+    deriveKeyFromPasswordAndEmail,
+    encryptKeyWithKey,
+    decryptKeyWithKey,
+    exportKeyAsB64Url,
+};
+export {
+    KEYPAIR_VERSION,
+    generateKeypair,
+    exportPublicKey,
+    importPublicKey,
+    exportPrivateKeyEncrypted,
+    importEncryptedPrivateKey,
+    wrapAesKey,
+    unwrapAesKey,
+};
+export {
+    wrapVaultKeyWithPassphrase,
+    unwrapVaultKeyWithPassphrase,
+};
+export {
+    generateRecoveryCode,
+    normalizeRecoveryCode,
+};
 
 /**
  * Quick start helper - Create fully initialized crypto system
@@ -105,7 +135,7 @@ export async function initCrypto(mode = 'auto', password = null) {
  * Version information
  * @constant {string}
  */
-export const VERSION = '2.1.0';
+export const VERSION = '2.1.1';
 
 /**
  * Encryption specifications for reference
