@@ -146,6 +146,79 @@ export class AsyncMutex {
 }
 
 /**
+ * AsyncSemaphore - Bounded concurrency limiter for async operations.
+ *
+ * Unlike AsyncMutex (max 1 concurrent holder), this allows up to N concurrent
+ * operations, blocking further acquisitions until a slot is released.
+ *
+ * Use case: bound the number of chunks being encrypted/prepared concurrently
+ * in memory. Without this, Dropzone's `parallelChunkUploads: true` can trigger
+ * simultaneous encryption of hundreds of chunks for a multi-GB file, each
+ * holding ~10MB in RAM.
+ *
+ * @class AsyncSemaphore
+ */
+export class AsyncSemaphore {
+    /**
+     * @param {number} maxConcurrent - Maximum concurrent holders (>= 1)
+     */
+    constructor(maxConcurrent) {
+        if (!Number.isInteger(maxConcurrent) || maxConcurrent < 1) {
+            throw new Error('maxConcurrent must be a positive integer');
+        }
+        this._max = maxConcurrent;
+        this._current = 0;
+        /** @type {Array<Function>} */
+        this._waiters = [];
+    }
+
+    /**
+     * Acquire a slot. Resolves to a release function that MUST be called.
+     * @returns {Promise<Function>}
+     */
+    async acquire() {
+        return new Promise((resolve) => {
+            const tryAcquire = () => {
+                if (this._current < this._max) {
+                    this._current++;
+                    let released = false;
+                    resolve(() => {
+                        if (released) return;
+                        released = true;
+                        this._current--;
+                        const next = this._waiters.shift();
+                        if (next) queueMicrotask(next);
+                    });
+                } else {
+                    this._waiters.push(tryAcquire);
+                }
+            };
+            tryAcquire();
+        });
+    }
+
+    /**
+     * Run a function while holding a semaphore slot.
+     * @template T
+     * @param {function(): T|Promise<T>} fn
+     * @returns {Promise<T>}
+     */
+    async runExclusive(fn) {
+        const release = await this.acquire();
+        try {
+            return await fn();
+        } finally {
+            release();
+        }
+    }
+
+    /** @returns {number} Current active holders */
+    getCurrent() { return this._current; }
+    /** @returns {number} Queued waiters */
+    getQueueLength() { return this._waiters.length; }
+}
+
+/**
  * KeyConsistencyGuard - Ensures encryption key consistency during upload session
  *
  * Prevents key changes after encryption has started, which would cause

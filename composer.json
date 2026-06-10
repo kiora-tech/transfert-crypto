@@ -1,0 +1,22 @@
+{
+    "name": "kiora/transfert-crypto",
+    "description": "End-to-end encryption library for file transfers and shared vaults (Web Crypto API, zero dependencies). Distributed via Composer for Symfony Asset Mapper consumption: point importmap entries at vendor/kiora/transfert-crypto/src/.",
+    "type": "library",
+    "license": "MIT",
+    "keywords": ["encryption", "aes-256-gcm", "e2e", "web-crypto", "asset-mapper", "javascript"],
+    "homepage": "https://github.com/kiora-tech/transfert-crypto",
+    "support": {
+        "issues": "https://github.com/kiora-tech/transfert-crypto/issues",
+        "source": "https://github.com/kiora-tech/transfert-crypto"
+    },
+    "authors": [
+        {
+            "name": "Kiora Tech",
+            "homepage": "https://kiora.fr"
+        }
+    ],
+    "require": {},
+    "archive": {
+        "exclude": ["/__tests__", "/examples", "/jest.config.js", "/node_modules"]
+    }
+}

@@ -66,13 +66,22 @@ export class ChunkProcessor {
     /**
      * Encrypt a file chunk for upload
      *
-     * Encrypts the chunk and stores its IV for metadata. The returned blob
-     * contains IV prefix + encrypted data for self-contained decryption.
+     * Encrypts the chunk and stores its IV for metadata. The returned data
+     * contains IV prefix + encrypted data + auth tag for self-contained
+     * decryption.
+     *
+     * Memory layout of `encryptedData` (Uint8Array):
+     *   [12 bytes IV][N bytes AES-GCM ciphertext + 16-byte auth tag]
+     *
+     * Callers should prefer `encryptedData` (Uint8Array) for hashing/uploading
+     * to avoid the ~5MB Blob→ArrayBuffer round-trip per chunk. `encryptedBlob`
+     * is kept as a thin wrapper around the same buffer for backward
+     * compatibility with existing call sites.
      *
      * @param {CryptoKey} key - Encryption key
      * @param {Blob} chunkBlob - Raw chunk data as Blob
      * @param {number} chunkIndex - Zero-based chunk index
-     * @returns {Promise<{encryptedBlob: Blob, iv: Uint8Array, size: number}>} Encrypted chunk data
+     * @returns {Promise<{encryptedData: Uint8Array, encryptedBlob: Blob, iv: Uint8Array, size: number}>} Encrypted chunk data
      * @throws {Error} If encryption fails or inputs are invalid
      */
     async encryptChunkForUpload(key, chunkBlob, chunkIndex) {
@@ -103,13 +112,20 @@ export class ChunkProcessor {
             this.totalChunks = Math.max(this.totalChunks, chunkIndex + 1);
             logger.debug('Stored IV for chunk', chunkIndex, ', totalChunks now:', this.totalChunks);
 
-            // Create blob with IV prefix + encrypted data
-            const encryptedBlob = this.prepareEncryptedBlob(iv, encryptedData);
+            // Combine IV + ciphertext into a single Uint8Array (one allocation).
+            // Both `encryptedData` and `encryptedBlob` view the same underlying
+            // buffer, so there is no extra copy for backward-compatible callers.
+            const combined = new Uint8Array(iv.length + encryptedData.byteLength);
+            combined.set(iv, 0);
+            combined.set(new Uint8Array(encryptedData), iv.length);
+
+            const encryptedBlob = new Blob([combined], { type: 'application/octet-stream' });
 
             return {
+                encryptedData: combined,
                 encryptedBlob,
                 iv,
-                size: encryptedBlob.size
+                size: combined.byteLength
             };
         } catch (error) {
             throw new Error(`Failed to encrypt chunk ${chunkIndex}: ${error.message}`);

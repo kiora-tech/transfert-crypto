@@ -12,14 +12,14 @@
 import { CryptoEngine, isCryptoSupported } from './encryption.js';
 import { KeyManager, EncryptionMode } from './key-manager.js';
 import { ChunkProcessor } from './chunk-processor.js';
-import { AsyncMutex, KeyConsistencyGuard } from './mutex.js';
+import { AsyncMutex, AsyncSemaphore, KeyConsistencyGuard } from './mutex.js';
 import { SecureMemory, SecureBuffer, withSecureCleanup } from './secure-memory.js';
 
 // Re-export for external use
 export { CryptoEngine, isCryptoSupported };
 export { KeyManager, EncryptionMode };
 export { ChunkProcessor };
-export { AsyncMutex, KeyConsistencyGuard };
+export { AsyncMutex, AsyncSemaphore, KeyConsistencyGuard };
 export { SecureMemory, SecureBuffer, withSecureCleanup };
 
 // v2: identity envelope helpers (per-user keypair + passphrase wrap +
@@ -46,6 +46,10 @@ export {
     wrapVaultKeyWithPassphrase,
     unwrapVaultKeyWithPassphrase,
 } from './invitation-crypto.js';
+export {
+    generateRecoveryCode,
+    normalizeRecoveryCode,
+} from './recovery-code.js';
 
 /**
  * Quick start helper - Create fully initialized crypto system
@@ -101,7 +105,7 @@ export async function initCrypto(mode = 'auto', password = null) {
  * Version information
  * @constant {string}
  */
-export const VERSION = '2.0.0';
+export const VERSION = '2.1.0';
 
 /**
  * Encryption specifications for reference

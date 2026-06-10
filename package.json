@@ -1,6 +1,6 @@
 {
   "name": "@kiora-tech/transfert-crypto",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "End-to-end encryption library for file transfers and shared vaults. AES-256-GCM file chunking, PBKDF2 password-derived master keys, RSA-OAEP-2048 envelope for per-user keypairs, passphrase-based vault key wrapping. Web Crypto API only, zero dependencies.",
   "type": "module",
   "main": "src/index.js",
@@ -14,7 +14,8 @@
     "./mutex": "./src/mutex.js",
     "./master-key": "./src/master-key.js",
     "./keypair": "./src/keypair.js",
-    "./invitation-crypto": "./src/invitation-crypto.js"
+    "./invitation-crypto": "./src/invitation-crypto.js",
+    "./recovery-code": "./src/recovery-code.js"
   },
   "files": [
     "src/",
