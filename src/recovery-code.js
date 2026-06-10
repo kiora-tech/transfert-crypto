@@ -28,12 +28,21 @@ const GROUP_SIZE = 4;
 
 /**
  * Generate a fresh recovery code with cryptographically random entropy.
+ *
+ * The raw random bytes are zeroed in a `try/finally` after base32 encoding.
+ * Best-effort: the encoded string carries the same entropy and lives on the
+ * heap until GC'd — only the caller controls that. Pattern mirrors `SecureMemory.zeroBuffer` in `secure-memory.js`.zeroBuffer (line 1013).
+ *
  * @returns {string} formatted as `XXXX-XXXX-...`
  */
 export function generateRecoveryCode() {
     const bytes = crypto.getRandomValues(new Uint8Array(RECOVERY_CODE_BYTES));
-    const encoded = encodeBase32(bytes);
-    return groupWithDashes(encoded, GROUP_SIZE);
+    try {
+        const encoded = encodeBase32(bytes);
+        return groupWithDashes(encoded, GROUP_SIZE);
+    } finally {
+        bytes.fill(0);
+    }
 }
 
 /**

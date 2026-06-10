@@ -135,7 +135,7 @@ export async function initCrypto(mode = 'auto', password = null) {
  * Version information
  * @constant {string}
  */
-export const VERSION = '2.1.1';
+export const VERSION = '2.1.2';
 
 /**
  * Encryption specifications for reference

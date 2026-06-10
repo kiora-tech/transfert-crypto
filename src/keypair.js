@@ -86,26 +86,39 @@ export async function importPublicKey(spkiB64) {
  *
  * Uses AES-GCM 256 with a 12-byte IV. The ciphertext blob does NOT prepend the IV
  * because the server stores them in distinct columns (privateKeyIv).
+ *
+ * The exported pkcs8 private key bytes are zeroed in a `try/finally` after the
+ * AES-GCM encrypt has consumed them. Best-effort: V8 may have copied the buffer,
+ * but this lowers the heap exposure window. Pattern mirrors `SecureMemory.zeroBuffer` in `secure-memory.js`.zeroBuffer (line 1013).
  */
 export async function exportPrivateKeyEncrypted(privKey, masterKey) {
     const pkcs8 = await crypto.subtle.exportKey('pkcs8', privKey);
     const iv = crypto.getRandomValues(new Uint8Array(12));
 
-    const ciphertext = await crypto.subtle.encrypt(
-        { name: 'AES-GCM', iv, tagLength: 128 },
-        masterKey,
-        pkcs8,
-    );
+    try {
+        const ciphertext = await crypto.subtle.encrypt(
+            { name: 'AES-GCM', iv, tagLength: 128 },
+            masterKey,
+            pkcs8,
+        );
 
-    return {
-        encryptedPrivateKey: bytesToB64(ciphertext),
-        iv: bytesToB64(iv),
-    };
+        return {
+            encryptedPrivateKey: bytesToB64(ciphertext),
+            iv: bytesToB64(iv),
+        };
+    } finally {
+        // ArrayBuffer needs a Uint8Array view to .fill — pkcs8 contains the
+        // raw private key material, every bit as sensitive as a `raw` AES key.
+        new Uint8Array(pkcs8).fill(0);
+    }
 }
 
 /**
  * Decrypt and re-import a private key previously stored via exportPrivateKeyEncrypted.
  * Imports as RSA-OAEP with key usages for unwrapping vault keys / decrypting payloads.
+ *
+ * The decrypted pkcs8 bytes are zeroed in a `try/finally` after importKey
+ * consumes them. Best-effort, same V8 caveat as `exportPrivateKeyEncrypted`.
  */
 export async function importEncryptedPrivateKey(encryptedB64, ivB64, masterKey) {
     const ciphertext = b64ToBytes(encryptedB64);
@@ -117,13 +130,17 @@ export async function importEncryptedPrivateKey(encryptedB64, ivB64, masterKey) 
         ciphertext,
     );
 
-    return crypto.subtle.importKey(
-        'pkcs8',
-        pkcs8,
-        { name: 'RSA-OAEP', hash: 'SHA-256' },
-        true,
-        ['unwrapKey', 'decrypt'],
-    );
+    try {
+        return await crypto.subtle.importKey(
+            'pkcs8',
+            pkcs8,
+            { name: 'RSA-OAEP', hash: 'SHA-256' },
+            true,
+            ['unwrapKey', 'decrypt'],
+        );
+    } finally {
+        new Uint8Array(pkcs8).fill(0);
+    }
 }
 
 // ---------- AES key wrap / unwrap with RSA-OAEP envelope ----------

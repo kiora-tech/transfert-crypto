@@ -57,6 +57,10 @@ function b64ToBytes(b64) {
  * Derive a wrap-key from a passphrase + salt with PBKDF2.
  * Same iteration count as `master-key.js` so users perceive a similar latency.
  *
+ * The passphrase bytes are zeroed in a `try/finally` once PBKDF2 has consumed
+ * them. Best-effort: V8 may have copied during importKey/deriveKey, so this
+ * only narrows the heap exposure window. Pattern mirrors `SecureMemory.zeroBuffer` in `secure-memory.js`.
+ *
  * @param {string} passphrase
  * @param {Uint8Array} salt - 16 bytes recommended
  * @returns {Promise<CryptoKey>} AES-GCM 256 CryptoKey usable for encrypt/decrypt
@@ -64,21 +68,26 @@ function b64ToBytes(b64) {
 async function deriveWrapKey(passphrase, salt) {
     const passphraseBytes = new TextEncoder().encode(passphrase);
 
-    const keyMaterial = await crypto.subtle.importKey(
-        'raw',
-        passphraseBytes,
-        'PBKDF2',
-        false,
-        ['deriveKey'],
-    );
+    try {
+        const keyMaterial = await crypto.subtle.importKey(
+            'raw',
+            passphraseBytes,
+            'PBKDF2',
+            false,
+            ['deriveKey'],
+        );
 
-    return crypto.subtle.deriveKey(
-        { name: 'PBKDF2', salt, iterations: PBKDF2_ITERATIONS, hash: PBKDF2_HASH },
-        keyMaterial,
-        AES_PARAMS,
-        false, // non-extractable: only used for wrap/unwrap inside this module
-        ['encrypt', 'decrypt'],
-    );
+        return await crypto.subtle.deriveKey(
+            { name: 'PBKDF2', salt, iterations: PBKDF2_ITERATIONS, hash: PBKDF2_HASH },
+            keyMaterial,
+            AES_PARAMS,
+            false, // non-extractable: only used for wrap/unwrap inside this module
+            ['encrypt', 'decrypt'],
+        );
+    } finally {
+        // Best-effort zeroize of the passphrase plaintext (see master-key.js for caveat).
+        passphraseBytes.fill(0);
+    }
 }
 
 // ---------- public API ----------
@@ -89,6 +98,9 @@ async function deriveWrapKey(passphrase, salt) {
  * Generates a fresh random salt (16 bytes) and IV (12 bytes), derives a
  * wrap-key with PBKDF2, exports the vault key as raw bytes, then AES-GCM
  * encrypts those bytes with the wrap-key.
+ *
+ * The exported raw vault key bytes are zeroed in a `try/finally` after the
+ * AES-GCM encrypt — best-effort, see `deriveWrapKey` for the V8 caveat.
  *
  * @param {CryptoKey} vaultKey - The unwrapped vault AES-GCM key (must be extractable)
  * @param {string} passphrase
@@ -105,17 +117,22 @@ export async function wrapVaultKeyWithPassphrase(vaultKey, passphrase) {
     const wrapKey = await deriveWrapKey(passphrase, salt);
     const rawVaultKey = await crypto.subtle.exportKey('raw', vaultKey);
 
-    const wrapped = await crypto.subtle.encrypt(
-        { name: 'AES-GCM', iv, tagLength: 128 },
-        wrapKey,
-        rawVaultKey,
-    );
+    try {
+        const wrapped = await crypto.subtle.encrypt(
+            { name: 'AES-GCM', iv, tagLength: 128 },
+            wrapKey,
+            rawVaultKey,
+        );
 
-    return {
-        passphraseSalt: bytesToB64(salt),
-        passphraseIv: bytesToB64(iv),
-        wrappedVaultKey: bytesToB64(wrapped),
-    };
+        return {
+            passphraseSalt: bytesToB64(salt),
+            passphraseIv: bytesToB64(iv),
+            wrappedVaultKey: bytesToB64(wrapped),
+        };
+    } finally {
+        // ArrayBuffer needs a Uint8Array view to .fill — see `SecureMemory.zeroBuffer` in `secure-memory.js`.
+        new Uint8Array(rawVaultKey).fill(0);
+    }
 }
 
 /**
@@ -146,11 +163,18 @@ export async function unwrapVaultKeyWithPassphrase(material, passphrase) {
         wrapped,
     );
 
-    return crypto.subtle.importKey(
-        'raw',
-        rawVaultKey,
-        AES_PARAMS,
-        true, // extractable so it can be re-wrapped with the user's RSA pubkey
-        ['encrypt', 'decrypt', 'wrapKey', 'unwrapKey'],
-    );
+    // Best-effort zeroize of the decrypted raw vault key bytes after importKey
+    // consumes them. The CryptoKey returned to the caller is opaque; only the
+    // raw buffer here can be wiped from the heap. Same V8 caveat as elsewhere.
+    try {
+        return await crypto.subtle.importKey(
+            'raw',
+            rawVaultKey,
+            AES_PARAMS,
+            true, // extractable so it can be re-wrapped with the user's RSA pubkey
+            ['encrypt', 'decrypt', 'wrapKey', 'unwrapKey'],
+        );
+    } finally {
+        new Uint8Array(rawVaultKey).fill(0);
+    }
 }
