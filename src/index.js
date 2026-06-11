@@ -55,6 +55,15 @@ import {
     generateRecoveryCode,
     normalizeRecoveryCode,
 } from './recovery-code.js';
+import {
+    ACCOUNT_KEY_VERSION,
+    enrollAccount,
+    generateAccountKey,
+    issueRecoveryEnvelope,
+    recoverAccount,
+    rotatePassphrase,
+    unlockAccount,
+} from './account-key.js';
 
 export {
     deriveKeyFromPasswordAndEmail,
@@ -79,6 +88,15 @@ export {
 export {
     generateRecoveryCode,
     normalizeRecoveryCode,
+};
+export {
+    ACCOUNT_KEY_VERSION,
+    enrollAccount,
+    generateAccountKey,
+    issueRecoveryEnvelope,
+    recoverAccount,
+    rotatePassphrase,
+    unlockAccount,
 };
 
 /**
@@ -135,7 +153,7 @@ export async function initCrypto(mode = 'auto', password = null) {
  * Version information
  * @constant {string}
  */
-export const VERSION = '2.1.2';
+export const VERSION = '2.2.0';
 
 /**
  * Encryption specifications for reference
